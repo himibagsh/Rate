@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Хими VIII, Урвалын хурд. Сурагчид зориулсан интерактив симуляцууд ба багшийн үзүүлэн.">
+<meta name="theme-color" content="#E6EDF6">
+<title>Хурдан гэдэг нь илүү их гэсэн үг үү?</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Mono&family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ground:#E6EDF6; --paper:#FFFFFF; --surface:#F4F8FC; --sunk:#EAF0F7;
+  --ink:#16202E; --ink-2:#4B5B71; --ink-3:#8593A6;
+  --rule:#D0DBE8; --rule-soft:#E4EBF3;
+  --proton:#D6303F;  --proton-bg:#FDECEE;
+  --neutron:#12855A; --neutron-bg:#E1F4EB;
+  --electron:#2159C5;--electron-bg:#E6EEFC;
+  --gold:#A9760C;    --gold-bg:#FCF1D6;
+  --ok:#12855A; --ok-bg:#E1F4EB;
+  --no:#D6303F; --no-bg:#FDECEE;
+  --shadow:0 1px 2px rgba(22,32,46,.05), 0 6px 20px rgba(22,32,46,.07);
+  --shadow-lg:0 2px 4px rgba(22,32,46,.06), 0 14px 40px rgba(22,32,46,.11);
+  --f-display:"PT Serif", Georgia, "Times New Roman", serif;
+  --f-body:"PT Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono:"PT Mono", "SF Mono", Consolas, monospace;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground); color:var(--ink); font-family:var(--f-body); -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0; font-family:var(--f-display); font-weight:700; text-wrap:balance; letter-spacing:-.012em}
+p{margin:0}
+button{font:inherit; color:inherit}
+img{max-width:100%}
+:focus-visible{outline:3px solid var(--gold); outline-offset:2px; border-radius:4px}
+
+/* ── particle chips ─────────────────────────── */
+.chip{display:inline-flex; align-items:center; gap:.4em; font-weight:700; padding:.18em .6em;
+  border-radius:999px; font-size:.92em; white-space:nowrap}
+.chip .mk{font-family:var(--f-mono); font-weight:700}
+.c-p{background:var(--proton-bg); color:var(--proton)}
+.c-n{background:var(--neutron-bg); color:var(--neutron)}
+.c-e{background:var(--electron-bg); color:var(--electron)}
+.c-g{background:var(--gold-bg); color:var(--gold)}
+
+/* ── buttons ────────────────────────────────── */
+.btn{border:1.5px solid var(--rule); background:var(--paper); border-radius:8px;
+  padding:9px 15px; cursor:pointer; font-size:15px; font-weight:700; color:var(--ink-2);
+  transition:border-color .12s, color .12s, background .12s; line-height:1.2}
+.btn:hover{border-color:var(--gold); color:var(--gold)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.4; cursor:default; transform:none}
+.btn-go{background:var(--gold); border-color:var(--gold); color:#fff}
+.btn-go:hover{background:#946608; border-color:#946608; color:#fff}
+.btn-sm{padding:6px 11px; font-size:13.5px}
+.seg{display:inline-flex; border:1.5px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--paper)}
+.seg button{background:transparent; border:0; padding:9px 15px; cursor:pointer; font-size:15px; font-weight:700; color:var(--ink-3)}
+.seg button+button{border-left:1.5px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--gold); color:#fff}
+
+/* ── widget shell ───────────────────────────── */
+.w{background:var(--paper); border:1.5px solid var(--rule); border-radius:var(--r);
+   padding:clamp(12px,2.2vw,18px); display:flex; flex-direction:column; gap:12px; box-shadow:var(--shadow)}
+.w-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px}
+.w-head h3{font-size:clamp(16px,2.1vw,21px)}
+.w-head .tag{font-family:var(--f-mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--gold); background:var(--gold-bg); padding:3px 8px; border-radius:999px}
+.w-hint{font-size:clamp(13px,1.5vw,15.5px); color:var(--ink-2)}
+.w-ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.w-ctl label{font-size:13.5px; color:var(--ink-2); display:inline-flex; align-items:center; gap:7px}
+input[type=range]{accent-color:var(--gold); width:clamp(110px,22vw,190px)}
+.stats{display:flex; flex-wrap:wrap; gap:6px; font-family:var(--f-mono); font-size:12.5px}
+.stats b{font-weight:700}
+.stat{padding:4px 10px; border-radius:999px; background:var(--sunk); color:var(--ink-2); font-variant-numeric:tabular-nums}
+.stat.p-{background:var(--proton-bg); color:var(--proton)}
+.stat.g-{background:var(--gold-bg); color:var(--gold)}
+.stat.n-{background:var(--sunk); color:var(--ink-2)}
+.cvwrap{position:relative; border:1.5px solid var(--rule-soft); border-radius:8px; overflow:hidden; background:var(--surface)}
+.cvwrap canvas{display:block; width:100%; height:100%}
+.ratio-wide{aspect-ratio:16/9}
+.ratio-sq{aspect-ratio:4/3}
+@media (max-width:560px){ .ratio-wide{aspect-ratio:4/3} }
+
+/* ── reveal card ────────────────────────────── */
+.reveal{border:1.5px solid var(--rule); border-radius:8px; background:var(--surface); overflow:hidden}
+.reveal>button{width:100%; text-align:left; background:transparent; border:0; padding:11px 14px;
+  cursor:pointer; font-size:clamp(14px,1.6vw,16.5px); font-weight:700; display:flex; gap:10px; align-items:center}
+.reveal>button::after{content:"+"; margin-left:auto; font-family:var(--f-mono); color:var(--gold); font-size:19px}
+.reveal[open]>button::after{content:"−"}
+.reveal .body{padding:0 14px 12px; font-size:clamp(13.5px,1.5vw,16px); color:var(--ink-2)}
+
+/* ── quiz ───────────────────────────────────── */
+.opts{display:grid; gap:8px; grid-template-columns:1fr 1fr}
+@media (max-width:520px){ .opts{grid-template-columns:1fr} }
+.opt{text-align:left; border:1.5px solid var(--rule); background:var(--paper); border-radius:8px;
+  padding:11px 14px; cursor:pointer; font-size:clamp(14px,1.6vw,16px); font-weight:700; color:var(--ink)}
+.opt:hover:not([disabled]){border-color:var(--gold)}
+.opt.good{background:var(--ok-bg); border-color:var(--ok); color:var(--ok)}
+.opt.bad{background:var(--no-bg); border-color:var(--no); color:var(--no)}
+.fb{padding:10px 13px; border-radius:8px; font-size:clamp(13.5px,1.5vw,16px); font-weight:700}
+.fb.good{background:var(--ok-bg); color:var(--ok)} .fb.bad{background:var(--no-bg); color:var(--no)}
+.bar-track{height:8px; background:var(--sunk); border-radius:999px; overflow:hidden}
+.bar-fill{height:100%; background:var(--gold); border-radius:999px; transition:width .3s}
+.qtext{font-size:clamp(16px,2.2vw,22px); font-weight:700; font-family:var(--f-display)}
+
+/* ── atom builder ───────────────────────────── */
+.bld{display:grid; gap:12px; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+@media (max-width:700px){ .bld{grid-template-columns:1fr} }
+.ctr{display:flex; align-items:center; gap:9px; border:1.5px solid var(--rule); border-radius:8px;
+  padding:7px 10px; background:var(--paper)}
+.ctr .lbl{flex:1; font-weight:700; font-size:clamp(13.5px,1.5vw,16px)}
+.ctr .val{font-family:var(--f-mono); font-size:clamp(17px,2.1vw,22px); min-width:2.4ch; text-align:center; font-variant-numeric:tabular-nums}
+.ctr button{width:34px; height:34px; border:1.5px solid var(--rule); background:var(--surface);
+  border-radius:7px; cursor:pointer; font-size:19px; line-height:1; font-weight:700}
+.ctr button:hover{border-color:var(--gold); color:var(--gold)}
+.ctr.p{border-left:5px solid var(--proton)} .ctr.n{border-left:5px solid var(--neutron)} .ctr.e{border-left:5px solid var(--electron)}
+.bld>svg{max-width:400px; margin-inline:auto}
+.ro-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+.ro{background:var(--surface); border:1.5px solid var(--rule-soft); border-radius:8px; padding:8px 11px}
+.ro .k{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3)}
+.ro .v{font-size:clamp(15px,1.8vw,20px); font-weight:700}
+.status{font-size:clamp(13.5px,1.5vw,16px); font-weight:700; padding:9px 12px; border-radius:8px}
+.status.ok{background:var(--ok-bg); color:var(--ok)}
+.status.ion{background:var(--gold-bg); color:var(--gold)}
+
+/* ── notation ───────────────────────────────── */
+.nota{font-family:var(--f-mono); display:inline-flex; align-items:center; line-height:1; font-weight:700}
+.nota .stack{display:inline-flex; flex-direction:column; align-items:flex-end; font-size:.44em; line-height:1.15; margin-right:.07em}
+.nota .post{font-size:.44em; align-self:flex-end; margin-left:.05em; line-height:1.85}
+.nota .A{color:var(--gold)} .nota .Z{color:var(--proton)} .nota .N{color:var(--neutron)}
+
+/* ── data table ─────────────────────────────── */
+.tscroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table.data{border-collapse:separate; border-spacing:0; width:100%; font-size:clamp(13px,1.6vw,17px); background:var(--paper)}
+table.data th,table.data td{border-bottom:1.5px solid var(--rule-soft); padding:.55em .7em; text-align:left}
+table.data thead th{background:var(--sunk); color:var(--ink-2); font-size:.85em; letter-spacing:.04em;
+  text-transform:uppercase; border-bottom:2px solid var(--rule)}
+table.data tr:last-child td{border-bottom:0}
+table.data td.num{font-family:var(--f-mono); text-align:center; font-variant-numeric:tabular-nums; font-weight:700}
+
+/* ── placement game ─────────────────────────── */
+.zones{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.zone{border:2.5px dashed var(--rule); border-radius:var(--r); padding:14px 10px; text-align:center;
+  cursor:pointer; background:var(--surface); transition:border-color .12s, background .12s}
+.zone:hover:not([disabled]){border-color:var(--gold); background:var(--gold-bg)}
+.zone .zt{font-weight:700; font-size:clamp(14px,1.7vw,17px)}
+.zone .zs{font-size:12.5px; color:var(--ink-3); margin-top:3px}
+.token{display:grid; place-items:center; gap:6px; padding:14px 10px; border-radius:var(--r); background:var(--surface);
+  border:1.5px solid var(--rule-soft)}
+.token .ball{width:52px; height:52px; border-radius:50%; display:grid; place-items:center;
+  color:#fff; font-family:var(--f-mono); font-size:20px; font-weight:700}
+.token .tn{font-weight:700; font-size:clamp(15px,1.9vw,19px)}
+
+@media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+
+
+/* ══ урвалын хурдын хичээл ═════════════════════ */
+:root{
+  --hi:#D6303F;  --hi-bg:#FDECEE;     /* тодруулсан / эх бодис */
+  --exp:#2159C5; --exp-bg:#E6EEFC;    /* бүтээгдэхүүн / туршилт */
+  --thr:#12855A; --thr-bg:#E1F4EB;    /* ашигтай мөргөлдөлт */
+}
+.legend2{display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--ink-2)}
+.legend2 i{display:inline-block; width:14px; height:14px; border-radius:3px;
+  vertical-align:-2px; margin-right:5px}
+.legend2 .li-a{background:var(--exp)} .legend2 .li-b{background:var(--hi)}
+.legend2 .li-c{background:var(--thr)}
+
+/* ── гулсууруудын самбар ── */
+.sliders{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px}
+.sl{border:1.5px solid var(--rule); border-radius:10px; padding:9px 11px; background:var(--paper)}
+.sl .lb{display:flex; justify-content:space-between; align-items:baseline;
+  font-weight:700; font-size:13.5px; margin-bottom:5px}
+.sl .lb b{font-family:var(--f-mono); color:var(--gold); font-weight:700}
+.sl input[type=range]{width:100%}
+.sl .hint{font-size:11px; color:var(--ink-3); margin-top:3px}
+
+/* ── тоолуурууд ── */
+.meters{display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:7px}
+.mt{background:var(--surface); border:1.5px solid var(--rule-soft); border-radius:8px; padding:7px 10px}
+.mt .k{font-family:var(--f-mono); font-size:10px; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--ink-3)}
+.mt .v{font-size:clamp(15px,2vw,20px); font-weight:700; font-variant-numeric:tabular-nums}
+.mt.a .v{color:var(--ink)} .mt.b .v{color:var(--thr)} .mt.c .v{color:var(--exp)}
+
+/* ── бооцооны виджет ── */
+.setups{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.setup{border:2px solid var(--rule); border-radius:10px; padding:12px; background:var(--surface)}
+.setup .nm{font-family:var(--f-mono); font-weight:700; font-size:16px; color:var(--gold); margin-bottom:6px}
+.setup ul{margin:0; padding-left:1.1em; font-size:clamp(12.5px,1.7vw,14.5px)}
+.setup li{margin-bottom:3px}
+.betrow{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px}
+@media (max-width:520px){ .betrow{grid-template-columns:1fr} }
+.banner{padding:11px 14px; border-radius:10px; font-weight:700;
+  font-size:clamp(13.5px,2vw,17px); text-align:center}
+.banner.win{background:var(--thr-bg); color:var(--thr)}
+.banner.lose{background:var(--hi-bg); color:var(--hi)}
+.banner.idle{background:var(--sunk); color:var(--ink-2)}
+
+html,body{height:100%}
+body{font-size:16.5px; line-height:1.5; display:flex; flex-direction:column}
+.home{flex:1; max-width:880px; width:100%; margin:0 auto;
+  padding-left:16px; padding-right:16px; padding-block:clamp(26px,7vw,60px) 24px;
+  display:flex; flex-direction:column; justify-content:center; gap:clamp(20px,4vw,34px)}
+
+.kick{font-family:var(--f-mono); font-size:clamp(11px,1.5vw,13px); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--gold)}
+h1{font-size:clamp(32px,8vw,58px); line-height:1.04; margin-top:10px}
+.sub{font-size:clamp(15.5px,2.4vw,19px); color:var(--ink-2); margin-top:10px; max-width:46ch}
+
+.choices{display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,2.2vw,20px)}
+@media (max-width:640px){ .choices{grid-template-columns:1fr} }
+
+.choice{display:flex; flex-direction:column; gap:9px; text-decoration:none; color:inherit;
+  background:var(--paper); border:2px solid var(--rule); border-radius:14px;
+  padding:clamp(18px,3vw,26px); box-shadow:var(--shadow);
+  transition:border-color .14s, transform .14s, box-shadow .14s}
+.choice:hover{border-color:var(--gold); transform:translateY(-3px); box-shadow:var(--shadow-lg)}
+.choice svg{width:clamp(56px,9vw,74px); height:auto; display:block}
+.ct{font-family:var(--f-display); font-weight:700; font-size:clamp(22px,3.6vw,30px); line-height:1.1}
+.cd{font-size:clamp(14px,1.9vw,16.5px); color:var(--ink-2); flex:1}
+.cgo{font-weight:700; font-size:clamp(14.5px,2vw,17px); color:var(--gold); margin-top:4px}
+.choice--main{border-color:var(--gold)}
+.choice--main .cgo::after,.choice .cgo::after{content:" →"}
+
+.foot{max-width:880px; width:100%; margin:0 auto; padding-left:16px; padding-right:16px;
+  padding-block:0 26px; font-size:13.5px; color:var(--ink-3); line-height:1.6}
+.foot b{color:var(--ink-2)}
+
+</style>
+</head>
+<body>
+<main class="home">
+  <header>
+    <div class="kick">Хими VIII · III бүлэг · 3.2 Урвалын хурд</div>
+    <h1>Хурдан гэдэг нь<br>илүү их гэсэн үг үү?</h1>
+    <p class="sub">Гурван ижил эм, гурван өөр нөхцөл. Доороос өөртөө тохирохыг сонгоорой.</p>
+  </header>
+  <div class="choices">
+    <a class="choice choice--main" href="surgach.html">
+      <svg viewBox="0 0 80 80" aria-hidden="true">
+        <rect x="28" y="26" width="24" height="24" rx="3" fill="#D6303F"/>
+        <rect x="14" y="54" width="12" height="12" rx="2" fill="#D6303F"/>
+        <rect x="34" y="56" width="10" height="10" rx="2" fill="#D6303F"/>
+        <rect x="52" y="53" width="13" height="13" rx="2" fill="#D6303F"/>
+        <circle cx="16" cy="18" r="4" fill="#2159C5"/><circle cx="40" cy="12" r="4" fill="#2159C5"/>
+        <circle cx="64" cy="20" r="4" fill="#2159C5"/><circle cx="68" cy="40" r="4" fill="#2159C5"/>
+        <circle cx="12" cy="38" r="4" fill="#2159C5"/>
+      </svg>
+      <span class="ct">Сурагч</span>
+      <span class="cd">Мөргөлдөлтийн симуляц, хурдны бооцоо, дасгал тоглоом. Утсаараа туршина.</span>
+      <span class="cgo">Эхлэх</span>
+    </a>
+    <a class="choice" href="slides.html">
+      <svg viewBox="0 0 80 80" aria-hidden="true">
+        <rect x="6" y="14" width="68" height="43" rx="4" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="2"/>
+        <rect x="13" y="21" width="30" height="5" rx="2.5" fill="var(--gold)"/>
+        <path d="M13 50 Q26 50 33 40 T61 30" fill="none" stroke="#12855A" stroke-width="3"/>
+        <rect x="28" y="63" width="8" height="6" rx="2" fill="var(--gold)"/>
+        <rect x="39" y="63" width="8" height="6" rx="2" fill="var(--rule)"/>
+        <rect x="50" y="63" width="8" height="6" rx="2" fill="var(--rule)"/>
+      </svg>
+      <span class="ct">Багш</span>
+      <span class="cd">13 слайдын үзүүлэн, проекторт зориулсан. Сумны товчоор удирдана.</span>
+      <span class="cgo">Нээх</span>
+    </a>
+  </div>
+</main>
+<div class="foot">
+  Сурах бичиг: <b>Хими VIII</b>, III бүлэг, 3.2 Урвалын хурд, х. 95–100 ·
+  Бэлтгэсэн: <b>Эрдэнэбат С.</b> · EDUC201 Сургалтын технологийн удиртгал<br>
+  Энэ хуудас ямар ч хувийн мэдээлэл цуглуулдаггүй, бүртгэл шаардахгүй.
+</div>
+</body>
+</html>

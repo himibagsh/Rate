@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="8-р ангийн хими: урвалын хурд ба мөргөлдөлтийн онол. Мөргөлдөлтийн симуляц, хурдны бооцоо — утсаараа туршиж үзээрэй.">
+<meta name="theme-color" content="#E6EDF6">
+<title>Хурдан гэдэг нь илүү их гэсэн үг үү?</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Mono&family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ground:#E6EDF6; --paper:#FFFFFF; --surface:#F4F8FC; --sunk:#EAF0F7;
+  --ink:#16202E; --ink-2:#4B5B71; --ink-3:#8593A6;
+  --rule:#D0DBE8; --rule-soft:#E4EBF3;
+  --proton:#D6303F;  --proton-bg:#FDECEE;
+  --neutron:#12855A; --neutron-bg:#E1F4EB;
+  --electron:#2159C5;--electron-bg:#E6EEFC;
+  --gold:#A9760C;    --gold-bg:#FCF1D6;
+  --ok:#12855A; --ok-bg:#E1F4EB;
+  --no:#D6303F; --no-bg:#FDECEE;
+  --shadow:0 1px 2px rgba(22,32,46,.05), 0 6px 20px rgba(22,32,46,.07);
+  --shadow-lg:0 2px 4px rgba(22,32,46,.06), 0 14px 40px rgba(22,32,46,.11);
+  --f-display:"PT Serif", Georgia, "Times New Roman", serif;
+  --f-body:"PT Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono:"PT Mono", "SF Mono", Consolas, monospace;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground); color:var(--ink); font-family:var(--f-body); -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0; font-family:var(--f-display); font-weight:700; text-wrap:balance; letter-spacing:-.012em}
+p{margin:0}
+button{font:inherit; color:inherit}
+img{max-width:100%}
+:focus-visible{outline:3px solid var(--gold); outline-offset:2px; border-radius:4px}
+
+/* ── particle chips ─────────────────────────── */
+.chip{display:inline-flex; align-items:center; gap:.4em; font-weight:700; padding:.18em .6em;
+  border-radius:999px; font-size:.92em; white-space:nowrap}
+.chip .mk{font-family:var(--f-mono); font-weight:700}
+.c-p{background:var(--proton-bg); color:var(--proton)}
+.c-n{background:var(--neutron-bg); color:var(--neutron)}
+.c-e{background:var(--electron-bg); color:var(--electron)}
+.c-g{background:var(--gold-bg); color:var(--gold)}
+
+/* ── buttons ────────────────────────────────── */
+.btn{border:1.5px solid var(--rule); background:var(--paper); border-radius:8px;
+  padding:9px 15px; cursor:pointer; font-size:15px; font-weight:700; color:var(--ink-2);
+  transition:border-color .12s, color .12s, background .12s; line-height:1.2}
+.btn:hover{border-color:var(--gold); color:var(--gold)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.4; cursor:default; transform:none}
+.btn-go{background:var(--gold); border-color:var(--gold); color:#fff}
+.btn-go:hover{background:#946608; border-color:#946608; color:#fff}
+.btn-sm{padding:6px 11px; font-size:13.5px}
+.seg{display:inline-flex; border:1.5px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--paper)}
+.seg button{background:transparent; border:0; padding:9px 15px; cursor:pointer; font-size:15px; font-weight:700; color:var(--ink-3)}
+.seg button+button{border-left:1.5px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--gold); color:#fff}
+
+/* ── widget shell ───────────────────────────── */
+.w{background:var(--paper); border:1.5px solid var(--rule); border-radius:var(--r);
+   padding:clamp(12px,2.2vw,18px); display:flex; flex-direction:column; gap:12px; box-shadow:var(--shadow)}
+.w-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px}
+.w-head h3{font-size:clamp(16px,2.1vw,21px)}
+.w-head .tag{font-family:var(--f-mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--gold); background:var(--gold-bg); padding:3px 8px; border-radius:999px}
+.w-hint{font-size:clamp(13px,1.5vw,15.5px); color:var(--ink-2)}
+.w-ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.w-ctl label{font-size:13.5px; color:var(--ink-2); display:inline-flex; align-items:center; gap:7px}
+input[type=range]{accent-color:var(--gold); width:clamp(110px,22vw,190px)}
+.stats{display:flex; flex-wrap:wrap; gap:6px; font-family:var(--f-mono); font-size:12.5px}
+.stats b{font-weight:700}
+.stat{padding:4px 10px; border-radius:999px; background:var(--sunk); color:var(--ink-2); font-variant-numeric:tabular-nums}
+.stat.p-{background:var(--proton-bg); color:var(--proton)}
+.stat.g-{background:var(--gold-bg); color:var(--gold)}
+.stat.n-{background:var(--sunk); color:var(--ink-2)}
+.cvwrap{position:relative; border:1.5px solid var(--rule-soft); border-radius:8px; overflow:hidden; background:var(--surface)}
+.cvwrap canvas{display:block; width:100%; height:100%}
+.ratio-wide{aspect-ratio:16/9}
+.ratio-sq{aspect-ratio:4/3}
+@media (max-width:560px){ .ratio-wide{aspect-ratio:4/3} }
+
+/* ── reveal card ────────────────────────────── */
+.reveal{border:1.5px solid var(--rule); border-radius:8px; background:var(--surface); overflow:hidden}
+.reveal>button{width:100%; text-align:left; background:transparent; border:0; padding:11px 14px;
+  cursor:pointer; font-size:clamp(14px,1.6vw,16.5px); font-weight:700; display:flex; gap:10px; align-items:center}
+.reveal>button::after{content:"+"; margin-left:auto; font-family:var(--f-mono); color:var(--gold); font-size:19px}
+.reveal[open]>button::after{content:"−"}
+.reveal .body{padding:0 14px 12px; font-size:clamp(13.5px,1.5vw,16px); color:var(--ink-2)}
+
+/* ── quiz ───────────────────────────────────── */
+.opts{display:grid; gap:8px; grid-template-columns:1fr 1fr}
+@media (max-width:520px){ .opts{grid-template-columns:1fr} }
+.opt{text-align:left; border:1.5px solid var(--rule); background:var(--paper); border-radius:8px;
+  padding:11px 14px; cursor:pointer; font-size:clamp(14px,1.6vw,16px); font-weight:700; color:var(--ink)}
+.opt:hover:not([disabled]){border-color:var(--gold)}
+.opt.good{background:var(--ok-bg); border-color:var(--ok); color:var(--ok)}
+.opt.bad{background:var(--no-bg); border-color:var(--no); color:var(--no)}
+.fb{padding:10px 13px; border-radius:8px; font-size:clamp(13.5px,1.5vw,16px); font-weight:700}
+.fb.good{background:var(--ok-bg); color:var(--ok)} .fb.bad{background:var(--no-bg); color:var(--no)}
+.bar-track{height:8px; background:var(--sunk); border-radius:999px; overflow:hidden}
+.bar-fill{height:100%; background:var(--gold); border-radius:999px; transition:width .3s}
+.qtext{font-size:clamp(16px,2.2vw,22px); font-weight:700; font-family:var(--f-display)}
+
+/* ── atom builder ───────────────────────────── */
+.bld{display:grid; gap:12px; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+@media (max-width:700px){ .bld{grid-template-columns:1fr} }
+.ctr{display:flex; align-items:center; gap:9px; border:1.5px solid var(--rule); border-radius:8px;
+  padding:7px 10px; background:var(--paper)}
+.ctr .lbl{flex:1; font-weight:700; font-size:clamp(13.5px,1.5vw,16px)}
+.ctr .val{font-family:var(--f-mono); font-size:clamp(17px,2.1vw,22px); min-width:2.4ch; text-align:center; font-variant-numeric:tabular-nums}
+.ctr button{width:34px; height:34px; border:1.5px solid var(--rule); background:var(--surface);
+  border-radius:7px; cursor:pointer; font-size:19px; line-height:1; font-weight:700}
+.ctr button:hover{border-color:var(--gold); color:var(--gold)}
+.ctr.p{border-left:5px solid var(--proton)} .ctr.n{border-left:5px solid var(--neutron)} .ctr.e{border-left:5px solid var(--electron)}
+.bld>svg{max-width:400px; margin-inline:auto}
+.ro-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+.ro{background:var(--surface); border:1.5px solid var(--rule-soft); border-radius:8px; padding:8px 11px}
+.ro .k{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3)}
+.ro .v{font-size:clamp(15px,1.8vw,20px); font-weight:700}
+.status{font-size:clamp(13.5px,1.5vw,16px); font-weight:700; padding:9px 12px; border-radius:8px}
+.status.ok{background:var(--ok-bg); color:var(--ok)}
+.status.ion{background:var(--gold-bg); color:var(--gold)}
+
+/* ── notation ───────────────────────────────── */
+.nota{font-family:var(--f-mono); display:inline-flex; align-items:center; line-height:1; font-weight:700}
+.nota .stack{display:inline-flex; flex-direction:column; align-items:flex-end; font-size:.44em; line-height:1.15; margin-right:.07em}
+.nota .post{font-size:.44em; align-self:flex-end; margin-left:.05em; line-height:1.85}
+.nota .A{color:var(--gold)} .nota .Z{color:var(--proton)} .nota .N{color:var(--neutron)}
+
+/* ── data table ─────────────────────────────── */
+.tscroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table.data{border-collapse:separate; border-spacing:0; width:100%; font-size:clamp(13px,1.6vw,17px); background:var(--paper)}
+table.data th,table.data td{border-bottom:1.5px solid var(--rule-soft); padding:.55em .7em; text-align:left}
+table.data thead th{background:var(--sunk); color:var(--ink-2); font-size:.85em; letter-spacing:.04em;
+  text-transform:uppercase; border-bottom:2px solid var(--rule)}
+table.data tr:last-child td{border-bottom:0}
+table.data td.num{font-family:var(--f-mono); text-align:center; font-variant-numeric:tabular-nums; font-weight:700}
+
+/* ── placement game ─────────────────────────── */
+.zones{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.zone{border:2.5px dashed var(--rule); border-radius:var(--r); padding:14px 10px; text-align:center;
+  cursor:pointer; background:var(--surface); transition:border-color .12s, background .12s}
+.zone:hover:not([disabled]){border-color:var(--gold); background:var(--gold-bg)}
+.zone .zt{font-weight:700; font-size:clamp(14px,1.7vw,17px)}
+.zone .zs{font-size:12.5px; color:var(--ink-3); margin-top:3px}
+.token{display:grid; place-items:center; gap:6px; padding:14px 10px; border-radius:var(--r); background:var(--surface);
+  border:1.5px solid var(--rule-soft)}
+.token .ball{width:52px; height:52px; border-radius:50%; display:grid; place-items:center;
+  color:#fff; font-family:var(--f-mono); font-size:20px; font-weight:700}
+.token .tn{font-weight:700; font-size:clamp(15px,1.9vw,19px)}
+
+@media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+
+
+/* ══ урвалын хурдын хичээл ═════════════════════ */
+:root{
+  --hi:#D6303F;  --hi-bg:#FDECEE;     /* тодруулсан / эх бодис */
+  --exp:#2159C5; --exp-bg:#E6EEFC;    /* бүтээгдэхүүн / туршилт */
+  --thr:#12855A; --thr-bg:#E1F4EB;    /* ашигтай мөргөлдөлт */
+}
+.legend2{display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--ink-2)}
+.legend2 i{display:inline-block; width:14px; height:14px; border-radius:3px;
+  vertical-align:-2px; margin-right:5px}
+.legend2 .li-a{background:var(--exp)} .legend2 .li-b{background:var(--hi)}
+.legend2 .li-c{background:var(--thr)}
+
+/* ── гулсууруудын самбар ── */
+.sliders{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px}
+.sl{border:1.5px solid var(--rule); border-radius:10px; padding:9px 11px; background:var(--paper)}
+.sl .lb{display:flex; justify-content:space-between; align-items:baseline;
+  font-weight:700; font-size:13.5px; margin-bottom:5px}
+.sl .lb b{font-family:var(--f-mono); color:var(--gold); font-weight:700}
+.sl input[type=range]{width:100%}
+.sl .hint{font-size:11px; color:var(--ink-3); margin-top:3px}
+
+/* ── тоолуурууд ── */
+.meters{display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:7px}
+.mt{background:var(--surface); border:1.5px solid var(--rule-soft); border-radius:8px; padding:7px 10px}
+.mt .k{font-family:var(--f-mono); font-size:10px; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--ink-3)}
+.mt .v{font-size:clamp(15px,2vw,20px); font-weight:700; font-variant-numeric:tabular-nums}
+.mt.a .v{color:var(--ink)} .mt.b .v{color:var(--thr)} .mt.c .v{color:var(--exp)}
+
+/* ── бооцооны виджет ── */
+.setups{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.setup{border:2px solid var(--rule); border-radius:10px; padding:12px; background:var(--surface)}
+.setup .nm{font-family:var(--f-mono); font-weight:700; font-size:16px; color:var(--gold); margin-bottom:6px}
+.setup ul{margin:0; padding-left:1.1em; font-size:clamp(12.5px,1.7vw,14.5px)}
+.setup li{margin-bottom:3px}
+.betrow{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px}
+@media (max-width:520px){ .betrow{grid-template-columns:1fr} }
+.banner{padding:11px 14px; border-radius:10px; font-weight:700;
+  font-size:clamp(13.5px,2vw,17px); text-align:center}
+.banner.win{background:var(--thr-bg); color:var(--thr)}
+.banner.lose{background:var(--hi-bg); color:var(--hi)}
+.banner.idle{background:var(--sunk); color:var(--ink-2)}
+
+/* ══ сурагчийн хуудас ══════════════════════════ */
+body{font-size:16.5px; line-height:1.55; padding-bottom:40px}
+.shell{max-width:800px; margin:0 auto; padding-left:16px; padding-right:16px}
+
+.topbar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:rgba(230,237,246,.93);
+  backdrop-filter:blur(10px); border-bottom:1.5px solid var(--rule); padding-block:8px}
+.topbar .in{max-width:800px; margin:0 auto; padding-left:16px; padding-right:16px;
+  display:flex; align-items:center; gap:10px}
+.topbar .brand{font-family:var(--f-mono); font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--gold); white-space:nowrap}
+.navchips{display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+.navchips::-webkit-scrollbar{display:none}
+.navchips a{flex:0 0 auto; font-size:13px; font-weight:700; text-decoration:none; color:var(--ink-2);
+  background:var(--paper); border:1.5px solid var(--rule); border-radius:999px; padding:5px 12px}
+.navchips a:hover{border-color:var(--gold); color:var(--gold)}
+
+.hero{padding-block:clamp(28px,7vw,56px) clamp(20px,5vw,36px)}
+.hero .kick{font-family:var(--f-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:10px}
+.hero h1{font-size:clamp(34px,10vw,62px); line-height:1.03}
+.hero .sub{font-size:clamp(17px,3.2vw,22px); color:var(--ink-2); margin-top:12px; max-width:34ch}
+.hero .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px}
+.hero .meta span{font-size:13px; font-weight:700; background:var(--paper); border:1.5px solid var(--rule);
+  border-radius:999px; padding:5px 12px; color:var(--ink-2)}
+
+section.blk{padding-block:clamp(20px,5vw,34px); border-top:1.5px solid var(--rule); scroll-margin-top:64px}
+section.blk:first-of-type{border-top:0}
+.eyebrow{font-family:var(--f-mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:7px}
+h2.bt{font-size:clamp(23px,5.4vw,34px); line-height:1.15; margin-bottom:10px}
+.lead{font-size:clamp(15.5px,2.3vw,18.5px); color:var(--ink-2); max-width:60ch}
+.lead+.lead{margin-top:9px}
+.stack{display:flex; flex-direction:column; gap:14px; margin-top:16px}
+
+.big-q{font-family:var(--f-display); font-size:clamp(20px,4.6vw,28px); font-weight:700; line-height:1.25;
+  border-left:5px solid var(--gold); padding-left:16px; color:var(--ink)}
+.callout{background:var(--gold-bg); border-radius:var(--r); padding:14px 16px;
+  font-size:clamp(14.5px,2vw,17px); color:var(--ink)}
+.callout b{color:var(--gold)}
+ul.bul{margin:10px 0 0; padding-left:1.15em; font-size:clamp(15px,2.2vw,17.5px); color:var(--ink-2)}
+ul.bul li{margin-bottom:6px}
+ul.bul li::marker{color:var(--gold)}
+
+.pairs{display:grid; gap:10px}
+.pair{background:var(--paper); border:1.5px solid var(--rule); border-radius:var(--r); overflow:hidden}
+.pair>button{width:100%; text-align:left; background:transparent; border:0; padding:13px 15px;
+  cursor:pointer; font-size:clamp(14.5px,2.1vw,17px); font-weight:700; display:flex; gap:10px; align-items:flex-start}
+.pair>button .no{font-family:var(--f-mono); color:var(--gold); flex:0 0 auto}
+.pair>button .tx{flex:1}
+.pair>button .pm{font-family:var(--f-mono); color:var(--gold); font-size:20px; line-height:1}
+.pair .ans{padding:0 15px 13px 40px; font-size:clamp(14px,2vw,16.5px); color:var(--ink-2)}
+.pair .ans b{color:var(--ink)}
+
+.notabox{display:flex; flex-wrap:wrap; gap:18px; align-items:center; background:var(--paper);
+  border:1.5px solid var(--rule); border-radius:var(--r); padding:18px}
+.notabox .nota{font-size:clamp(40px,11vw,68px)}
+.notakey{display:flex; flex-direction:column; gap:7px; font-size:clamp(14px,2vw,16.5px)}
+.notakey b{font-family:var(--f-mono)}
+
+.glossg{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin-top:14px}
+.gl{background:var(--paper); border:1.5px solid var(--rule); border-radius:8px; padding:8px 11px}
+.gl .en{font-family:var(--f-mono); font-size:11.5px; color:var(--gold)}
+.gl .mn{font-weight:700; font-size:14.5px}
+.links{display:flex; flex-wrap:wrap; gap:9px; margin-top:16px}
+.links a{font-weight:700; font-size:14.5px; text-decoration:none; color:var(--electron); background:var(--paper);
+  border:1.5px solid var(--rule); border-radius:8px; padding:10px 14px}
+.links a:hover{border-color:var(--electron)}
+footer{margin-top:34px; padding-top:18px; border-top:1.5px solid var(--rule);
+  font-size:13.5px; color:var(--ink-3); text-align:center}
+.totop{display:inline-block; margin-top:12px; font-weight:700; color:var(--gold); text-decoration:none}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="in">
+  <span class="brand">Хими VIII</span>
+  <nav class="navchips" aria-label="Хэсгүүд">
+    <a href="#asuudal">Асуудал</a>
+    <a href="#morgoldolt">Мөргөлдөлт</a>
+    <a href="#huchin">Гурван хүчин зүйл</a>
+    <a href="#bootsoo">Бооцоо</a>
+    <a href="#dasgal">Дасгал</a>
+  </nav>
+</div></div>
+
+<div class="shell">
+
+<header class="hero">
+  <div class="kick">8-р анги · III бүлэг · 3.2 Урвалын хурд</div>
+  <h1>Хурдан гэдэг нь илүү их гэсэн үг үү?</h1>
+  <p class="sub">Гурван ижил эм, гурван өөр нөхцөл. Нэг нь 20 секундэд, нөгөө нь 3 минутад дуусна. Тэгвэл аль нь илүү их хий ялгаруулах вэ?</p>
+  <div class="meta"><span>3 интерактив симуляц</span><span>Утсанд тохирсон</span><span>Дасгал + оноо</span></div>
+</header>
+
+<!-- 1 ─ Асуудал -->
+<section class="blk" id="asuudal">
+  <div class="eyebrow">1 · Асуудал</div>
+  <h2 class="bt">Хичээл дээрх туршилт</h2>
+  <p class="lead">Гурван ижил шимэгдэх эм, гурван ижил аяга ус:</p>
+  <ul class="bul">
+    <li><b>A</b> — бүтэн эм, тасалгааны ус</li>
+    <li><b>B</b> — <b>нунтагласан</b> эм, тасалгааны ус</li>
+    <li><b>C</b> — бүтэн эм, <b>халуун</b> ус</li>
+  </ul>
+  <div class="stack">
+    <p class="big-q">B ба C нь A-аас хамаагүй хурдан дууссан. Гэвч гурван бөмбөлөг <b>ижил хэмжээтэй</b> болсон. Яагаад?</p>
+    <div class="callout"><b>Ихэнх хүн</b> «хурдан бол илүү их» гэж боддог. Гал тогоо, спорт, замын хөдөлгөөнд ихэвчлэн тийм байдаг. Химид тийм биш — яагаад гэдгийг доорх симуляц харуулна.</div>
+  </div>
+</section>
+
+<!-- 2 ─ Мөргөлдөлт -->
+<section class="blk" id="morgoldolt">
+  <div class="eyebrow">2 · Тайлбар</div>
+  <h2 class="bt">Мөргөлдөлтийн онол</h2>
+  <p class="lead">Урвал явагдахын зайлшгүй нөхцөл нь урвалд орж байгаа бодисын жижиг хэсгүүд
+    хоорондоо <b>мөргөлдөх</b> явдал юм. Гэхдээ мөргөлдөлт бүр урвал үүсгэдэггүй — хэсгүүд
+    хангалттай <b>кинетик энергитэй</b> БА зөв <b>орон зайн байрлалтай</b> байх ёстой.</p>
+  <div class="stack">
+    <div class="callout">Урвал үүсгэсэн мөргөлдөлтийг <b>ашигтай мөргөлдөлт</b>, үүсгээгүйг
+      <b>идэвхгүй мөргөлдөлт</b> гэнэ. (Сурах бичиг, х. 95)</div>
+    <div data-w="collide"></div>
+  </div>
+</section>
+
+<!-- 3 ─ Гурван хүчин зүйл -->
+<section class="blk" id="huchin">
+  <div class="eyebrow">3 · Дүрэм</div>
+  <h2 class="bt">Гурван хүчин зүйл — бүгд нэг зарчмаар</h2>
+  <div class="stack">
+    <div class="tscroll" style="border:1.5px solid var(--rule);border-radius:var(--r);overflow:hidden">
+      <table class="data">
+        <thead><tr><th>Хүчин зүйл</th><th>Мөргөлдөлтөд үзүүлэх нөлөө</th><th>Хурд</th><th>Нийт хий</th></tr></thead>
+        <tbody>
+          <tr><td><b>Гадаргуугийн талбай ↑</b><br><span style="font-size:.85em;color:var(--ink-3)">нунтаглах</span></td>
+              <td>ил гарсан хэсэг олшрох → мөргөлдөлт олон</td><td class="num">↑</td><td class="num">=</td></tr>
+          <tr><td><b>Температур ↑</b></td>
+              <td>хэсгүүд хурдан хөдлөх → мөргөлдөлт олон БА ашигтай хувь өсөх</td><td class="num">↑</td><td class="num">=</td></tr>
+          <tr><td><b>Концентрац ↑</b></td>
+              <td>нэгж эзлэхүүнд хэсэг олон → мөргөлдөлт олон</td><td class="num">↑</td><td class="num">=</td></tr>
+          <tr><td><b>Эх бодисын хэмжээ ↑</b></td>
+              <td>урвалд орох бодис илүү их</td><td class="num">↑</td><td class="num" style="color:var(--hi)">↑</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><b>Сүүлийн багана нь гол нь.</b> Эхний гурав нь урвал хэдий ХУРДАН явахад
+      нөлөөлнө — хэдий ХЭМЖЭЭНИЙ бүтээгдэхүүн гарахад биш. Хийн хэмжээг зөвхөн <b>эх бодисын
+      хэмжээ</b> тодорхойлно. Тийм учраас гурван бөмбөлөг ижил болсон юм.</div>
+  </div>
+</section>
+
+<!-- 4 ─ Бооцоо -->
+<section class="blk" id="bootsoo">
+  <div class="eyebrow">4 · Сорилт</div>
+  <h2 class="bt">Одоо чи таамагла</h2>
+  <p class="lead">Зургаан шат. Шат бүрд хоёр туршилтыг харьцуулна. Эхний асуулт амархан,
+    хоёр дахь нь л жинхэнэ сорилт.</p>
+  <div class="stack"><div data-w="bet"></div></div>
+</section>
+
+<!-- 5 ─ Дасгал -->
+<section class="blk" id="dasgal">
+  <div class="eyebrow">5 · Өөрийгөө шалга</div>
+  <h2 class="bt">Дасгал тоглоом</h2>
+  <p class="lead">10 асуулт, санамсаргүй сонгогдоно. 8-аас дээш оноо авбал гэрийн даалгавар биелсэн.</p>
+  <div class="stack"><div data-w="quiz"></div></div>
+</section>
+
+<!-- 6 ─ Нэмэлт -->
+<section class="blk" id="nemelt">
+  <div class="eyebrow">6 · Нэмэлт</div>
+  <h2 class="bt">Гол нэр томьёо</h2>
+  <div class="glossg">
+    <div class="gl"><div class="en">Reaction rate</div><div class="mn">Урвалын хурд</div></div>
+    <div class="gl"><div class="en">Collision theory</div><div class="mn">Мөргөлдөлтийн онол</div></div>
+    <div class="gl"><div class="en">Successful collision</div><div class="mn">Ашигтай мөргөлдөлт</div></div>
+    <div class="gl"><div class="en">Surface area</div><div class="mn">Гадаргуугийн талбай</div></div>
+    <div class="gl"><div class="en">Concentration</div><div class="mn">Концентрац</div></div>
+    <div class="gl"><div class="en">Temperature</div><div class="mn">Температур</div></div>
+    <div class="gl"><div class="en">Catalyst</div><div class="mn">Катализатор (дараагийн хичээл)</div></div>
+    <div class="gl"><div class="en">Yield</div><div class="mn">Гарц — үүссэн нийт хэмжээ</div></div>
+  </div>
+  <div class="callout" style="margin-top:16px"><b>Гэрийн даалгавар.</b> Сурах бичиг х. 100,
+    Туршилт 5-ын асуулт 1–5. Нэмэлт: гэртээ хүнс хадгалах 3 аргыг олж, тус бүрийг
+    мөргөлдөлтийн онолоор 1 өгүүлбэрээр тайлбарла.</div>
+</section>
+
+<footer>
+  Хими VIII · III бүлэг · 3.2 Урвалын хурд · Ерөнхий боловсролын 8-р анги<br>
+  Бэлтгэсэн: Эрдэнэбат С. · EDUC201 Сургалтын технологийн удиртгал
+  <br><a class="totop" href="#asuudal">↑ Эхлэл рүү буцах</a> &nbsp;·&nbsp; <a class="totop" href="index.html">Нүүр хуудас</a>
+</footer>
+
+</div>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Урвалын хурд — интерактив симуляцууд
+   Хими VIII, III бүлэг 3.2 · Эрдэнэбат С. · EDUC201
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+"use strict";
+
+function ri(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+function shuffle(a){ for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888'; }
+
+function reveal(root,label,html){
+  var d=document.createElement('div'); d.className='reveal';
+  var b=document.createElement('button'); b.type='button'; b.textContent=label;
+  var body=document.createElement('div'); body.className='body'; body.hidden=true; body.innerHTML=html;
+  b.addEventListener('click',function(){ body.hidden=!body.hidden;
+    b.textContent = body.hidden ? label : 'Хариултыг нуух'; });
+  d.appendChild(b); d.appendChild(body); root.appendChild(d); return d;
+}
+function onVisible(el,cb){
+  if (typeof IntersectionObserver==='undefined'){ cb(true); return; }
+  new IntersectionObserver(function(es){ cb(es[0].isIntersecting); },{threshold:0.01}).observe(el);
+}
+
+/* ─────────────────────────────────────────────
+   1. МӨРГӨЛДӨЛТИЙН СИМУЛЯЦ — хичээлийн зүрх
+   ───────────────────────────────────────────── */
+function wCollide(root){
+  root.classList.add('w');
+  root.innerHTML =
+   '<div class="w-head"><h3>Мөргөлдөлтийн симуляц</h3><span class="tag">Симуляц 1</span></div>'+
+   '<p class="w-hint">Улаан блокууд нь <b>хатуу эх бодис</b> (жишээ нь шохойн чулуу), цэнхэр цэгүүд нь '+
+     '<b>хүчлийн жижиг хэсэг</b>. Хэсэг блокны ГАДАРГУУД мөргөлдөхөд мөргөлдөлт тоологдоно; '+
+     'хангалттай хурдтай байвал <b>ашигтай мөргөлдөлт</b> болж, блок бага зэрэг хайлна.</p>'+
+   '<div class="cvwrap ratio-wide"><canvas data-t="box"></canvas></div>'+
+   '<div class="sliders">'+
+     '<div class="sl"><div class="lb"><span>Температур</span><b data-t="lT">20 °C</b></div>'+
+       '<input type="range" data-s="T" min="5" max="100" value="30">'+
+       '<div class="hint">хэсгүүдийн хурд</div></div>'+
+     '<div class="sl"><div class="lb"><span>Концентрац</span><b data-t="lC">дунд</b></div>'+
+       '<input type="range" data-s="C" min="12" max="80" value="40">'+
+       '<div class="hint">хүчлийн хэсгийн тоо</div></div>'+
+     '<div class="sl"><div class="lb"><span>Гадаргуугийн талбай</span><b data-t="lS">1 бүхэл хэсэг</b></div>'+
+       '<input type="range" data-s="S" min="0" max="3" value="0">'+
+       '<div class="hint">нийт МАСС тогтмол, зөвхөн хуваагдана</div></div>'+
+   '</div>'+
+   '<div class="meters">'+
+     '<div class="mt a"><div class="k">Мөргөлдөлт / сек</div><div class="v" data-t="mc">0</div></div>'+
+     '<div class="mt b"><div class="k">Ашигтай / сек</div><div class="v" data-t="ms">0</div></div>'+
+     '<div class="mt c"><div class="k">Үүссэн хий</div><div class="v" data-t="mp">0%</div></div>'+
+     '<div class="mt a"><div class="k">Хугацаа</div><div class="v" data-t="mt">0.0 с</div></div>'+
+   '</div>'+
+   '<div class="cvwrap" style="aspect-ratio:3/1"><canvas data-t="graph"></canvas></div>'+
+   '<div class="legend2"><span><i class="li-c"></i>одоогийн ажиллалт</span>'+
+     '<span><i class="li-b"></i>өмнөх ажиллалтууд</span>'+
+     '<span>нийт эх бодис тогтмол — муруй <b>үргэлж ижил түвшинд</b> тэгширнэ</span></div>'+
+   '<div class="w-ctl"><button class="btn btn-go" data-t="run">Эхлүүлэх</button>'+
+     '<button class="btn" data-t="clear">Муруйг цэвэрлэх</button>'+
+     '<span class="stat g-" data-t="last">—</span></div>';
+
+  var TOTAL = 60, SPLIT = [1,4,9,16], THRESH = 1.25;
+  var cv = root.querySelector('[data-t="box"]'), ctx = cv.getContext('2d');
+  var gv = root.querySelector('[data-t="graph"]'), gx = gv.getContext('2d');
+  var W=0,H=0,GW=0,GH=0, live=true, running=false;
+  var parts=[], blocks=[], remaining=TOTAL, t=0, colls=0, succ=0, cwin=[], swin=[];
+  var samples=[], ghosts=[], finished=0;
+  var T=30, C=40, Sx=0, COL={};
+
+  function readColors(){
+    COL = {surface:cssv('--surface'), rule:cssv('--rule'), hi:cssv('--hi'),
+           exp:cssv('--exp'), thr:cssv('--thr'), ink3:cssv('--ink-3'), gold:cssv('--gold')};
+  }
+  function size(c){
+    var r=c.getBoundingClientRect(), d=Math.min(window.devicePixelRatio||1,2);
+    c.width=Math.round(Math.max(240,r.width)*d); c.height=Math.round(Math.max(90,r.height)*d);
+    c.getContext('2d').setTransform(d,0,0,d,0,0);
+    return [Math.max(240,r.width), Math.max(90,r.height)];
+  }
+  function resize(){
+    readColors();
+    var oldW=W, oldH=H;
+    var a=size(cv); W=a[0]; H=a[1];
+    var b=size(gv); GW=b[0]; GH=b[1];
+    /* Слайд солигдоход canvas томордог. Хэсгүүдийг хувь тэнцүүлэн шилжүүлэхгүй бол
+       бүгд хуучин жижиг талбайдаа хуримтлагдаж үлдэнэ. */
+    if (oldW>0 && oldH>0 && parts.length){
+      var fx=W/oldW, fy=H/oldH;
+      for (var i=0;i<parts.length;i++){ parts[i].x*=fx; parts[i].y*=fy; }
+    }
+    layout(); draw(); drawGraph();
+  }
+  function layout(){
+    var k=SPLIT[Sx], n=Math.round(Math.sqrt(k));
+    var span=Math.min(W,H)*0.56, side=span/n;
+    var x0=(W-span)/2, y0=(H-span)/2;
+    /* Хэмжээ өөрчлөгдөхөд блокуудыг зөвхөн ДАХИН БАЙРЛУУЛНА — хайлсан хэмжээг нь
+       хадгална. Эс бөгөөс slide солих бүрд урвал эхнээсээ эхэлнэ. */
+    var keep = (blocks.length === k) ? blocks.map(function(b){ return b.units; }) : null;
+    blocks=[]; var idx=0;
+    for (var i=0;i<n;i++) for (var j=0;j<n;j++){
+      blocks.push({cx:x0+side*(j+0.5), cy:y0+side*(i+0.5), full:side*0.82,
+                   units: keep ? keep[idx] : TOTAL/k, max:TOTAL/k});
+      idx++;
+    }
+  }
+  function spawn(){
+    parts=[];
+    var base=0.75 + (T/100)*2.30;   /* T=5 → бараг урвалгүй, T=100 → бүх хэсэг ашигтай */
+    for (var i=0;i<C;i++){
+      var sp=base*(0.45+Math.random()*1.25), a=Math.random()*Math.PI*2;
+      parts.push({x:Math.random()*W, y:Math.random()*H,
+                  vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, sp:sp, cd:0});
+    }
+  }
+  function reset(full){
+    running=false; t=0; colls=0; succ=0; cwin=[]; swin=[]; samples=[]; remaining=TOTAL;
+    layout(); spawn(); finished=0;
+    if (full){ ghosts=[]; root.querySelector('[data-t="last"]').textContent='—'; }
+    draw(); drawGraph(); meters();
+  }
+  function side(b){ return b.full*Math.sqrt(Math.max(b.units,0)/b.max); }
+  function step(dt){
+    var f=dt*60;
+    for (var i=0;i<parts.length;i++){
+      var p=parts[i];
+      p.x+=p.vx*f; p.y+=p.vy*f;
+      if (p.x<0){p.x=0;p.vx=-p.vx;} if (p.x>W){p.x=W;p.vx=-p.vx;}
+      if (p.y<0){p.y=0;p.vy=-p.vy;} if (p.y>H){p.y=H;p.vy=-p.vy;}
+      if (p.cd>0){ p.cd-=f; continue; }
+      for (var j=0;j<blocks.length;j++){
+        var b=blocks[j]; if (b.units<=0) continue;
+        var s=side(b)/2;
+        if (Math.abs(p.x-b.cx)<s && Math.abs(p.y-b.cy)<s){
+          colls++; p.cd=4;
+          var dx=p.x-b.cx, dy=p.y-b.cy;
+          if (Math.abs(dx)>Math.abs(dy)){ p.vx=-p.vx; p.x=b.cx+Math.sign(dx)*(s+1); }
+          else { p.vy=-p.vy; p.y=b.cy+Math.sign(dy)*(s+1); }
+          if (p.sp>THRESH && remaining>0){ succ++; b.units-=1; remaining-=1; }
+          break;
+        }
+      }
+    }
+    cwin.push(colls); swin.push(succ);
+    if (cwin.length>60){ cwin.shift(); swin.shift(); }
+    t+=dt;
+    samples.push([t, (TOTAL-remaining)/TOTAL]);
+    if (remaining<=0 && !finished){
+      finished=t; running=false;
+      ghosts.push(samples.slice()); if (ghosts.length>4) ghosts.shift();
+      root.querySelector('[data-t="last"]').textContent='Дууссан: '+t.toFixed(1)+' сек';
+      root.querySelector('[data-t="run"]').textContent='Эхлүүлэх';
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H); ctx.fillStyle=COL.surface; ctx.fillRect(0,0,W,H);
+    for (var j=0;j<blocks.length;j++){
+      var b=blocks[j]; if (b.units<=0) continue;
+      var s=side(b);
+      ctx.fillStyle=COL.hi; ctx.globalAlpha=.9;
+      ctx.fillRect(b.cx-s/2,b.cy-s/2,s,s); ctx.globalAlpha=1;
+    }
+    ctx.fillStyle=COL.exp;
+    for (var i=0;i<parts.length;i++){
+      ctx.beginPath(); ctx.arc(parts[i].x,parts[i].y,2.6,0,Math.PI*2); ctx.fill();
+    }
+    ctx.font='600 11px "PT Mono", monospace'; ctx.fillStyle=COL.ink3; ctx.textAlign='left';
+    ctx.fillText('эх бодис '+Math.round(remaining/TOTAL*100)+'%', 8, 16);
+  }
+  function drawGraph(){
+    gx.clearRect(0,0,GW,GH); gx.fillStyle=COL.surface; gx.fillRect(0,0,GW,GH);
+    var TMAX=28, pad=6;
+    gx.strokeStyle=COL.rule; gx.lineWidth=1.5; gx.setLineDash([3,4]);
+    gx.beginPath(); gx.moveTo(0,pad); gx.lineTo(GW,pad); gx.stroke(); gx.setLineDash([]);
+    gx.font='600 10px "PT Mono", monospace'; gx.fillStyle=COL.ink3; gx.textAlign='left';
+    gx.fillText('100% — нийт хий', 6, pad+12);
+    function curve(arr,color,alpha,wid){
+      if (arr.length<2) return;
+      gx.strokeStyle=color; gx.globalAlpha=alpha; gx.lineWidth=wid; gx.beginPath();
+      for (var i=0;i<arr.length;i++){
+        var x=Math.min(GW, arr[i][0]/TMAX*GW), y=GH-pad-arr[i][1]*(GH-pad*2);
+        i ? gx.lineTo(x,y) : gx.moveTo(x,y);
+      }
+      gx.stroke(); gx.globalAlpha=1;
+    }
+    for (var g=0;g<ghosts.length;g++) curve(ghosts[g],COL.hi,.38,2);
+    curve(samples,COL.thr,1,2.6);
+  }
+  function meters(){
+    var n=cwin.length;
+    var cps = n>1 ? Math.round((cwin[n-1]-cwin[0])/(n/60)) : 0;
+    var sps = n>1 ? Math.round((swin[n-1]-swin[0])/(n/60)) : 0;
+    root.querySelector('[data-t="mc"]').textContent=cps;
+    root.querySelector('[data-t="ms"]').textContent=sps;
+    root.querySelector('[data-t="mp"]').textContent=Math.round((TOTAL-remaining)/TOTAL*100)+'%';
+    root.querySelector('[data-t="mt"]').textContent=t.toFixed(1)+' с';
+  }
+  var last=0;
+  function loop(ts){
+    requestAnimationFrame(loop);
+    /* Идэвхгүй виджетийг л зогсооно. Ажиллаж байгаа симуляцыг дэлгэцнээс
+       гарлаа гэж хэзээ ч зогсоохгүй — сурагч хүснэгтээ уншихаар гүйлгэхэд
+       урвал үргэлжлэх ёстой. */
+    if (!live && !running){ last=ts; return; }
+    if (!last) last=ts;
+    var dt=Math.min((ts-last)/1000,1/30); last=ts;
+    if (running) step(dt);
+    draw(); drawGraph(); meters();
+  }
+  function labels(){
+    root.querySelector('[data-t="lT"]').textContent = Math.round(5+T*0.75)+' °C';
+    root.querySelector('[data-t="lC"]').textContent = C<28?'бага':(C<55?'дунд':'өндөр');
+    root.querySelector('[data-t="lS"]').textContent =
+      ['1 бүхэл хэсэг','4 хэсэг','9 хэсэг','16 хэсэг (нунтаг)'][Sx];
+  }
+  root.querySelector('[data-s="T"]').addEventListener('input',function(e){ T=+e.target.value; labels(); reset(false); });
+  root.querySelector('[data-s="C"]').addEventListener('input',function(e){ C=+e.target.value; labels(); reset(false); });
+  root.querySelector('[data-s="S"]').addEventListener('input',function(e){ Sx=+e.target.value; labels(); reset(false); });
+  root.querySelector('[data-t="run"]').addEventListener('click',function(){
+    if (remaining<=0) reset(false);
+    running=!running;
+    this.textContent = running ? 'Түр зогсоох' : 'Үргэлжлүүлэх';
+  });
+  root.querySelector('[data-t="clear"]').addEventListener('click',function(){ reset(true); });
+  window.addEventListener('resize',resize);
+  onVisible(cv,function(v){ live=v; });
+  labels(); resize(); reset(true); requestAnimationFrame(loop);
+
+  reveal(root,'Графикийг анхаарч хараарай — юу анзаарав?',
+   '<p>Гулсуурыг ХЭРХЭН ч өөрчилсөн муруй бүр <b>ижил түвшинд</b> тэгширдэг. Өөрчлөгддөг нь '+
+   'зөвхөн тэр түвшиндээ <b>ХЭЗЭЭ</b> хүрэх явдал.</p>'+
+   '<p style="margin-top:6px">Шалтгаан: эх бодисын хэмжээ тогтмол. Гадаргуугийн гулсуур блокыг '+
+   '<b>хуваадаг</b> болохоос масс нэмдэггүй — 1 бүхэл хэсэг ба 16 нунтаг хэсгийн нийт масс ижил.</p>'+
+   '<p style="margin-top:6px"><b>Дүгнэлт: ХУРД ≠ ХЭМЖЭЭ.</b> Хүчин зүйлс нь урвал хэдий хурдан '+
+   'явахад нөлөөлнө, хэдий хэмжээний бүтээгдэхүүн гарахад биш.</p>');
+}
+
+/* ─────────────────────────────────────────────
+   2. ХУРДНЫ БООЦОО
+   ───────────────────────────────────────────── */
+function wBet(root){
+  root.classList.add('w');
+  root.innerHTML =
+   '<div class="w-head"><h3>Хурдны бооцоо</h3><span class="tag">Симуляц 2</span></div>'+
+   '<p class="w-hint">Хоёр туршилтыг харьцуул. <b>Хоёр</b> асуултад хариул — хоёр дахь нь л '+
+     'жинхэнэ сорилт.</p>'+
+   '<div class="w-ctl"><span class="stat" data-t="prog">Шат 1 / 6</span>'+
+     '<span class="stat g-" data-t="sc">Оноо 0</span></div>'+
+   '<div class="setups" data-t="su"></div>'+
+   '<p class="qtext" style="font-size:clamp(14px,1.9vw,17px)">1. Аль нь хурдан дуусах вэ?</p>'+
+   '<div class="betrow" data-t="q1"></div>'+
+   '<p class="qtext" style="font-size:clamp(14px,1.9vw,17px)">2. Нийт ялгарах хийн хэмжээ?</p>'+
+   '<div class="betrow" data-t="q2"></div>'+
+   '<div class="fb" data-t="fb" hidden></div>'+
+   '<div class="w-ctl"><button class="btn btn-go" data-t="next" hidden>Дараагийн шат</button>'+
+     '<button class="btn" data-t="again" hidden>Дахин эхлэх</button></div>';
+
+  var R=[
+   {a:['2 г шохойн чулуу — БҮХЭЛ хэсэг','1 М хүчил, илүүдэлтэй','20 °C'],
+    b:['2 г шохойн чулуу — НУНТАГ','1 М хүчил, илүүдэлтэй','20 °C'],
+    f:'B', g:'same',
+    e:'Нунтаг нь гадаргуугийн талбай ихтэй → мөргөлдөлт олон → хурдан. Гэхдээ шохойн чулууны '+
+      'МАСС ижил тул нийт хий ижил.'},
+   {a:['2 г нунтаг','1 М хүчил, илүүдэлтэй','20 °C'],
+    b:['2 г нунтаг','1 М хүчил, илүүдэлтэй','45 °C'],
+    f:'B', g:'same',
+    e:'Температур ихсэхэд хэсгүүд хурдан хөдөлж, мөргөлдөлт олширно БА ашигтай мөргөлдөлтийн '+
+      'хувь өснө. Эх бодис ижил тул нийт хий ижил.'},
+   {a:['2 г нунтаг','1 М хүчил, илүүдэлтэй','20 °C'],
+    b:['2 г нунтаг','2 М хүчил, илүүдэлтэй','20 °C'],
+    f:'B', g:'same',
+    e:'Концентрац ихсэхэд нэгж эзлэхүүнд хүчлийн хэсэг олон → мөргөлдөлт олон → хурдан. '+
+      'Хүчил аль хэдийн ИЛҮҮДЭЛТЭЙ байсан тул хийн хэмжээг шохойн чулуу л хязгаарлана — ижил.'},
+   {a:['2 г нунтаг','1 М хүчил, илүүдэлтэй','20 °C'],
+    b:['4 г нунтаг','1 М хүчил, илүүдэлтэй','20 °C'],
+    f:'A', g:'B',
+    e:'Энэ удаад ЭХ БОДИС өөрчлөгдсөн! B нь 2 дахин их хий ялгаруулна. Харин A нь бодис бага '+
+      'тул эрт дуусна. Анхаар: хүчин зүйл биш, бодисын ХЭМЖЭЭ өөрчлөгдвөл хийн хэмжээ өөрчлөгдөнө.'},
+   {a:['2 г нунтаг','1 М хүчил, илүүдэлтэй','5 °C (хөргөгч)'],
+    b:['2 г нунтаг','1 М хүчил, илүүдэлтэй','20 °C'],
+    f:'B', g:'same',
+    e:'Хүйтэнд хэсгүүд удаан хөдөлнө → мөргөлдөлт цөөн → удаан. Сүү хөргөгчинд удаан гашилдаг '+
+      'нь яг энэ шалтгаантай. Эх бодис ижил тул нийт хий ижил.'},
+   {a:['2 г нунтаг','1 М хүчил 50 мл, илүүдэлтэй','20 °C'],
+    b:['2 г нунтаг','1 М хүчил 50 мл + 50 мл УС','20 °C'],
+    f:'A', g:'same',
+    e:'Ус нэмэхэд хүчил ШИНГЭРНЭ — концентрац буурч, мөргөлдөлт цөөрч, удаашрана. '+
+      'Гэхдээ хүчлийн нийт хэмжээ хэвээр, шохойн чулуу ч хэвээр тул нийт хий ижил.'}
+  ];
+  var ord=[], i=0, score=0, a1=null, a2=null, locked=false;
+  var su=root.querySelector('[data-t="su"]'), fb=root.querySelector('[data-t="fb"]'),
+      nx=root.querySelector('[data-t="next"]'), ag=root.querySelector('[data-t="again"]');
+
+  function btns(host,opts,cb){
+    host.innerHTML='';
+    opts.forEach(function(o){
+      var b=document.createElement('button');
+      b.type='button'; b.className='opt'; b.textContent=o.t; b.dataset.v=o.v;
+      b.addEventListener('click',function(){ cb(o.v,b,host); });
+      host.appendChild(b);
+    });
+  }
+  function show(){
+    if (i>=ord.length){
+      su.innerHTML=''; fb.hidden=false;
+      fb.className='fb '+(score>=9?'good':'bad');
+      fb.textContent='Дууслаа! Оноо: '+score+' / 12. '+
+        (score>=9?'Хурд ба хэмжээг сайн ялгаж байна.':'2-р асуултуудыг дахин хараарай.');
+      root.querySelector('[data-t="q1"]').innerHTML='';
+      root.querySelector('[data-t="q2"]').innerHTML='';
+      nx.hidden=true; ag.hidden=false; return;
+    }
+    var r=ord[i]; a1=null; a2=null; locked=false;
+    su.innerHTML =
+      '<div class="setup"><div class="nm">A</div><ul><li>'+r.a.join('</li><li>')+'</li></ul></div>'+
+      '<div class="setup"><div class="nm">B</div><ul><li>'+r.b.join('</li><li>')+'</li></ul></div>';
+    btns(root.querySelector('[data-t="q1"]'),
+         [{t:'A хурдан',v:'A'},{t:'B хурдан',v:'B'}],
+         function(v,b,h){ if(locked) return; a1=v; mark(h,b); maybe(); });
+    btns(root.querySelector('[data-t="q2"]'),
+         [{t:'Ижил хэмжээтэй',v:'same'},{t:'A илүү их',v:'A'},{t:'B илүү их',v:'B'}],
+         function(v,b,h){ if(locked) return; a2=v; mark(h,b); maybe(); });
+    fb.hidden=true; nx.hidden=true;
+    root.querySelector('[data-t="prog"]').textContent='Шат '+(i+1)+' / 6';
+  }
+  function mark(host,btn){
+    Array.prototype.forEach.call(host.children,function(c){ c.classList.remove('good'); });
+    btn.classList.add('good');
+  }
+  function maybe(){
+    if (a1===null || a2===null || locked) return;
+    locked=true;
+    var r=ord[i], ok1=(a1===r.f), ok2=(a2===r.g);
+    if (ok1) score++; if (ok2) score++;
+    Array.prototype.forEach.call(root.querySelectorAll('[data-t="q1"] .opt'),function(b){
+      b.disabled=true; b.classList.remove('good');
+      if (b.dataset.v===r.f) b.classList.add('good');
+      else if (b.dataset.v===a1) b.classList.add('bad');
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-t="q2"] .opt'),function(b){
+      b.disabled=true; b.classList.remove('good');
+      if (b.dataset.v===r.g) b.classList.add('good');
+      else if (b.dataset.v===a2) b.classList.add('bad');
+    });
+    root.querySelector('[data-t="sc"]').textContent='Оноо '+score;
+    fb.hidden=false; fb.className='fb '+((ok1&&ok2)?'good':'bad');
+    fb.textContent=(ok1&&ok2?'Хоёулаа зөв! ':(ok1?'Хурд зөв, хэмжээ буруу. ':'Дахин бод. '))+r.e;
+    nx.hidden=false;
+  }
+  nx.addEventListener('click',function(){ i++; show(); });
+  function start(){ ord=R.slice(); i=0; score=0;
+    root.querySelector('[data-t="sc"]').textContent='Оноо 0'; ag.hidden=true; show(); }
+  ag.addEventListener('click',start);
+  start();
+}
+
+/* ─────────────────────────────────────────────
+   3. ДАСГАЛ ТОГЛООМ
+   ───────────────────────────────────────────── */
+function wQuiz(root){
+  root.classList.add('w');
+  root.innerHTML =
+   '<div class="w-head"><h3>Дасгал тоглоом</h3><span class="tag">Симуляц 3</span></div>'+
+   '<p class="w-hint">10 асуулт. Хариулах бүрд тайлбар шууд гарч ирнэ.</p>'+
+   '<div class="bar-track"><div class="bar-fill" data-t="bar" style="width:0%"></div></div>'+
+   '<div class="w-ctl"><span class="stat" data-t="prog">Асуулт 1 / 10</span>'+
+     '<span class="stat g-" data-t="score">Оноо 0</span></div>'+
+   '<p class="qtext" data-t="q"></p><div class="opts" data-t="opts"></div>'+
+   '<div class="fb" data-t="fb" hidden></div>'+
+   '<div class="w-ctl"><button class="btn btn-go" data-t="next" hidden>Дараагийн асуулт</button>'+
+     '<button class="btn" data-t="again" hidden>Дахин эхлэх</button></div>';
+
+  function mk(q,o,ans,e){ return {q:q,opts:o,ans:ans,exp:e}; }
+  var G=[
+   function(){ var o=shuffle(['Гадаргуугийн талбай ихсэж, мөргөлдөлт олширдог',
+     'Бодисын масс нэмэгддэг','Хэсгүүд хүчтэй болдог','Хүчил өтгөрдөг']);
+     return mk('Хатуу бодисыг нунтаглахад урвал яагаад хурдасдаг вэ?',o,
+       o.indexOf('Гадаргуугийн талбай ихсэж, мөргөлдөлт олширдог'),
+       'Масс өөрчлөгдөхгүй — зөвхөн ил гарсан гадаргуу ихэснэ (сурах бичиг х. 99).'); },
+   function(){ var o=shuffle(['Ижил хэвээр','2 дахин их','2 дахин бага','Таамаглах боломжгүй']);
+     return mk('Хүчлийн концентрацыг 2 дахин ихэсгэв (хүчил илүүдэлтэй). Нийт ялгарах хийн хэмжээ яах вэ?',
+       o,o.indexOf('Ижил хэвээр'),
+       'Хийн хэмжээг хязгаарлагч нь хатуу эх бодис. Тэр өөрчлөгдөөгүй тул хий ижил. Зөвхөн ХУРД өснө.'); },
+   function(){ var o=shuffle(['Үгүй — хангалттай энерги ба зөв байрлал хэрэгтэй',
+     'Тийм — мөргөлдөлт бүр урвал үүсгэнэ','Зөвхөн халуунд','Зөвхөн нунтаг бодист']);
+     return mk('Мөргөлдөлт бүр урвал үүсгэдэг үү?',o,
+       o.indexOf('Үгүй — хангалттай энерги ба зөв байрлал хэрэгтэй'),
+       'Ийм мөргөлдөлтийг ашигтай мөргөлдөлт гэнэ; бусад нь идэвхгүй (сурах бичиг х. 95).'); },
+   function(){ var o=shuffle(['Буурдаг','Ихэсдэг','Тогтмол байдаг','Эхлээд буураад дараа нь ихэсдэг']);
+     return mk('Урвал явагдах явцад түүний хурд ерөнхийдөө хэрхэн өөрчлөгддөг вэ?',o,
+       o.indexOf('Буурдаг'),'Эх бодис хэрэглэгдэхийн хэрээр хэсгийн тоо цөөрч, мөргөлдөлт багасна.'); },
+   function(){ var o=shuffle(['Ижил хэмжээтэй','Нунтаг нь илүү их','Бүхэл нь илүү их','Хэлэх боломжгүй']);
+     return mk('Ижил масстай шохойн чулууг бүхлээр ба нунтаглаж урвалд оруулав. Нийт ялгарах хий?',
+       o,o.indexOf('Ижил хэмжээтэй'),'Масс ижил тул хий ижил. Нунтаг нь зөвхөн ХУРДАН дуусна.'); },
+   function(){ var o=shuffle(['Температур бага тул мөргөлдөлт цөөн','Хөргөгчинд агаар байхгүй',
+     'Сүү хөлддөг','Бактери хүйтэнд үхдэг']);
+     return mk('Сүү хөргөгчинд яагаад удаан гашилдаг вэ? (мөргөлдөлтийн онолоор)',o,
+       o.indexOf('Температур бага тул мөргөлдөлт цөөн'),
+       'Температур буурахад хэсгүүдийн кинетик энерги буурч, мөргөлдөлт цөөрнө (х. 91, Зураг 3.2.10).'); },
+   function(){ var o=shuffle(['12 см²','6 см²','24 см²','48 см²']);
+     return mk('6 см² гадаргуутай кубыг 8 тэнцүү хэсэгт хуваахад нийт гадаргуугийн талбай хэд болох вэ?',
+       o,o.indexOf('12 см²'),'2 дахин нэмэгдэнэ (сурах бичиг х. 99-ийн загвар).'); },
+   function(){ var o=shuffle(['Нэгж хугацаанд бодисын хэмжээний өөрчлөлт','Урвалын нийт хугацаа',
+     'Ялгарсан хийн хэмжээ','Хэсгүүдийн хурд']);
+     return mk('Урвалын хурд гэж юу вэ?',o,
+       o.indexOf('Нэгж хугацаанд бодисын хэмжээний өөрчлөлт'),'Сурах бичиг, х. 91.'); },
+   function(){ var o=shuffle(['Хоёулаа ихэснэ','Зөвхөн мөргөлдөлтийн тоо ихэснэ',
+     'Зөвхөн ашигтай хувь ихэснэ','Хоёулаа өөрчлөгдөхгүй']);
+     return mk('Температур ихсэхэд мөргөлдөлтийн ТОО ба АШИГТАЙ мөргөлдөлтийн ХУВЬ яах вэ?',o,
+       o.indexOf('Хоёулаа ихэснэ'),
+       'Хурд ихсэхэд мөргөлдөөн олширно; мөн илүү олон хэсэг шаардлагатай энергид хүрнэ.'); },
+   function(){ var o=shuffle(['Хавтгайрна (тэгширнэ)','Эгц өснө','Доошилно','Хэлбэлзэнэ']);
+     return mk('Эх бодис дуусахад бүтээгдэхүүн-хугацааны графикийн муруй яах вэ?',o,
+       o.indexOf('Хавтгайрна (тэгширнэ)'),'Шинэ бүтээгдэхүүн үүсэхээ больсон тул муруй тэгширнэ.'); },
+   function(){ var o=shuffle(['Урвал үүсгэсэн мөргөлдөлт','Хамгийн хүчтэй мөргөлдөлт',
+     'Хамгийн олон мөргөлдөлт','Халуунд болсон мөргөлдөлт']);
+     return mk('«Ашигтай мөргөлдөлт» гэж юу вэ?',o,o.indexOf('Урвал үүсгэсэн мөргөлдөлт'),
+       'Хангалттай энерги БА зөв орон зайн байрлалтай мөргөлдөлт (х. 95).'); }
+  ];
+  var qs=[],i=0,score=0;
+  var qEl=root.querySelector('[data-t="q"]'), oEl=root.querySelector('[data-t="opts"]'),
+      fb=root.querySelector('[data-t="fb"]'), nx=root.querySelector('[data-t="next"]'),
+      ag=root.querySelector('[data-t="again"]'), bar=root.querySelector('[data-t="bar"]'),
+      pr=root.querySelector('[data-t="prog"]'), sc=root.querySelector('[data-t="score"]');
+  function show(){
+    if (i>=qs.length){
+      qEl.textContent='Дууслаа! Оноо: '+score+' / 10'; oEl.innerHTML='';
+      fb.hidden=false; fb.className='fb '+(score>=8?'good':'bad');
+      fb.textContent=score>=8?'Маш сайн! Сэдвээ сайн эзэмшжээ.':
+        (score>=6?'Болж байна. Алдсан асуултуудаа дахин үзээрэй.':
+        'Мөргөлдөлтийн симуляцыг дахин ажиглаад оролдоорой.');
+      nx.hidden=true; ag.hidden=false; bar.style.width='100%'; return;
+    }
+    var q=qs[i]; qEl.textContent=q.q; oEl.innerHTML='';
+    q.opts.forEach(function(t,k){
+      var b=document.createElement('button');
+      b.type='button'; b.className='opt'; b.textContent=t;
+      b.addEventListener('click',function(){ answer(k); });
+      oEl.appendChild(b);
+    });
+    fb.hidden=true; nx.hidden=true;
+    pr.textContent='Асуулт '+(i+1)+' / 10';
+    bar.style.width=Math.round(i/10*100)+'%';
+  }
+  function answer(k){
+    var q=qs[i];
+    Array.prototype.forEach.call(oEl.querySelectorAll('.opt'),function(b,j){
+      b.disabled=true;
+      if (j===q.ans) b.classList.add('good'); else if (j===k) b.classList.add('bad');
+    });
+    var good=(k===q.ans); if (good) score++;
+    sc.textContent='Оноо '+score;
+    fb.hidden=false; fb.className='fb '+(good?'good':'bad');
+    fb.textContent=(good?'Зөв! ':'Буруу. ')+q.exp;
+    nx.hidden=false; nx.focus();
+  }
+  nx.addEventListener('click',function(){ i++; show(); });
+  function start(){ qs=shuffle(G.slice()).slice(0,10).map(function(g){ return g(); });
+    i=0; score=0; sc.textContent='Оноо 0'; ag.hidden=true; show(); }
+  ag.addEventListener('click',start);
+  start();
+}
+/* ─────────────────────────────────────────────
+   7. QR КОД ҮҮСГЭГЧ (багшийн слайдад)
+   ───────────────────────────────────────────── */
+function wQr(root){
+  root.classList.add('w');
+  root.innerHTML =
+   '<div class="w-head"><h3>Сурагчийн хуудасны QR код</h3></div>'+
+   '<p class="w-hint">Байршуулсан хаягаа доор буулгаж тавиад товчоо дарвал QR код гарч ирнэ.</p>'+
+   '<div class="w-ctl"><input type="url" data-t="url" id="qr-url" placeholder="https://himibagsh.github.io/Math/" '+
+     'style="flex:1;min-width:200px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;'+
+     'font:inherit;font-size:15px;background:var(--paper);color:var(--ink)">'+
+     '<button class="btn btn-go" data-t="go">QR үүсгэх</button></div>'+
+   '<div data-t="out" style="display:grid;place-items:center;padding:10px"></div>'+
+   '<p class="w-hint" data-t="fall" hidden></p>';
+  var inp = root.querySelector('[data-t="url"]'), out = root.querySelector('[data-t="out"]'),
+      fall = root.querySelector('[data-t="fall"]');
+  root.querySelector('[data-t="go"]').addEventListener('click', function(){
+    var u = inp.value.trim();
+    out.innerHTML = ''; fall.hidden = true;
+    if (!u){ fall.hidden = false; fall.textContent = 'Эхлээд хаягаа оруулна уу.'; return; }
+    if (window.QRCode){
+      var box = document.createElement('div');
+      box.style.cssText = 'background:#fff;padding:14px;border-radius:10px;border:1.5px solid var(--rule)';
+      out.appendChild(box);
+      try { new window.QRCode(box, {text:u, width:230, height:230, colorDark:'#16202E', colorLight:'#ffffff'}); }
+      catch(e){ fall.hidden = false; }
+      var cap = document.createElement('p');
+      cap.className = 'w-hint';
+      cap.style.cssText = 'margin-top:8px;font-family:var(--f-mono);font-size:13px;word-break:break-all;text-align:center';
+      cap.textContent = u; out.appendChild(cap);
+    } else {
+      fall.hidden = false;
+      fall.innerHTML = 'QR номын сан ачаалагдсангүй (интернэт холболтоо шалгана уу). Хаягаа самбарт бичнэ үү: '+
+        '<b style="word-break:break-all">' + u.replace(/</g,'&lt;') + '</b>';
+    }
+  });
+}
+
+
+/* ───────────── Bootstrap ───────────── */
+var REG = { collide:wCollide, bet:wBet, quiz:wQuiz, qr:wQr };
+function boot(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-w]'), function(el){
+    var f=REG[el.dataset.w];
+    if (f && !el.dataset.ready){ el.dataset.ready='1'; try { f(el); } catch(e){ console.error(el.dataset.w,e); } }
+  });
+}
+window.ChemWidgets = { boot: boot };
+if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+else boot();
+})();
+
+</script>
+</body>
+</html>
